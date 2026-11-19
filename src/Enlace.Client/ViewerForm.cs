@@ -191,7 +191,7 @@ internal sealed class ViewerForm : Form
     private void SendCombo(params uint[] keys)
     {
         foreach (var k in keys) _c.SendKey(k, true);
-        foreach (var k in keys.Reverse()) _c.SendKey(k, false);
+        for (int i = keys.Length - 1; i >= 0; i--) _c.SendKey(keys[i], false);
         _surface.Focus();
     }
 

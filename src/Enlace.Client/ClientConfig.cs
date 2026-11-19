@@ -36,6 +36,11 @@ internal sealed class ClientConfig
         host = input;
         port = Rfb.DefaultPort;
         if (input.Length == 0) return false;
+        // IPv6 sin corchetes (p. ej. fe80::1): sin puerto. Sólo "nombre::puerto" o "IPv4::puerto" usan la forma VNC.
+        int dc = input.IndexOf("::", StringComparison.Ordinal);
+        bool vncDouble = dc > 0 && input.IndexOf(':') == dc && input.LastIndexOf(':') == dc + 1 &&
+                         !input[..dc].All(Uri.IsHexDigit);
+        if (!vncDouble && input.Count(c => c == ':') >= 2 && System.Net.IPAddress.TryParse(input, out _)) return true;
 
         if (input.StartsWith('['))
         {

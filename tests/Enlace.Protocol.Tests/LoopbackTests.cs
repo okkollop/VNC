@@ -176,3 +176,57 @@ public class LoopbackTests : IDisposable
         Assert.Equal("contenido", File.ReadAllText(b3.TopLevelPaths[0]));
     }
 }
+
+/// <summary>Simula el saludo de RealVNC Server ("RFB 005.000").</summary>
+public class RealVncHandshakeTests
+{
+    private static async Task<(string ClientVersion, Exception? Error)> Run(byte[] securityTypes)
+    {
+        var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        l.Start();
+        int port = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+        var server = Task.Run(() =>
+        {
+            using var s = l.AcceptTcpClient();
+            var ns = s.GetStream();
+            ns.Write("RFB 005.000\n"u8);
+            var v = new byte[12];
+            ns.ReadExactly(v);
+            ns.WriteByte((byte)securityTypes.Length);
+            ns.Write(securityTypes);
+            if (securityTypes.Contains((byte)2))
+            {
+                ns.ReadByte();                         // tipo elegido
+                ns.Write(new byte[16]);                // reto
+                ns.ReadExactly(new byte[16]);          // respuesta
+                ns.Write(new byte[] { 0, 0, 0, 1, 0, 0, 0, 3 }); // fallo + motivo
+                ns.Write("mal"u8);
+            }
+            Thread.Sleep(200);
+            return System.Text.Encoding.ASCII.GetString(v);
+        });
+        Exception? err = null;
+        try { using var c = await RfbClient.ConnectAsync("127.0.0.1", port, "x"); }
+        catch (Exception ex) { err = ex; }
+        var ver = await server;
+        l.Stop();
+        return (ver, err);
+    }
+
+    [Fact]
+    public async Task NegotiatesStandardVersionAndUsesVncAuth()
+    {
+        var (ver, err) = await Run(new byte[] { 13, 6, 2 });
+        Assert.Equal("RFB 003.008\n", ver);
+        Assert.IsType<RfbAuthException>(err); // llegó hasta la contraseña
+        Assert.Equal("mal", err!.Message);
+    }
+
+    [Fact]
+    public async Task ExplainsRealVncOnlyEncryption()
+    {
+        var (_, err) = await Run(new byte[] { 13, 6, 5 });
+        Assert.IsType<RfbException>(err);
+        Assert.Contains("RealVNC", err!.Message);
+    }
+}

@@ -71,7 +71,10 @@ public sealed class RfbClient : IDisposable
         var ver = Encoding.ASCII.GetString(_in.ReadBytes(12));
         if (!ver.StartsWith("RFB ") || !int.TryParse(ver.AsSpan(4, 3), out int major) || !int.TryParse(ver.AsSpan(8, 3), out int minor))
             throw new RfbException("El equipo remoto no es un servidor VNC");
-        if (major != 3) throw new RfbException($"Versión RFB no soportada: {ver.Trim()}");
+        if (major < 3) throw new RfbException($"Versión RFB no soportada: {ver.Trim()}");
+        // RealVNC Server se anuncia como "RFB 005.000" (su protocolo propio) pero acepta clientes 3.8:
+        // se responde con la versión estándar más alta que sabemos hablar.
+        if (major > 3) minor = 8;
         minor = minor >= 8 ? 8 : minor == 7 ? 7 : 3;
         _net.Write(Encoding.ASCII.GetBytes($"RFB 003.00{minor}\n"));
 

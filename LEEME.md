@@ -13,7 +13,20 @@ No necesitan instalación ni tener .NET instalado.
    (sólo cuentan 8 caracteres, como en VNC). Windows preguntará por el firewall: permite
    el acceso en redes privadas.
 2. Haz clic derecho en el icono de la bandeja (junto al reloj) para ver la IP del equipo.
-3. En el otro equipo abre `EnlaceVisor.exe`, escribe la IP y la contraseña y pulsa **Conectar**.
+3. En el otro equipo abre `EnlaceVisor.exe`. Escribe la IP arriba y pulsa **Conectar**, o guárdalo
+   con **Nuevo equipo** (nombre, dirección y carpeta). Doble clic en un equipo para conectar: la primera
+   vez pide la contraseña y pregunta si quieres guardarla.
+
+## Traer los equipos de RealVNC
+
+En RealVNC Viewer exporta las conexiones (crea un archivo `.vnc` por equipo). En Enlace Visor:
+**Importar de RealVNC → Carpeta con archivos .vnc…** y elige la carpeta. Se usa el nombre, la
+dirección, la etiqueta como carpeta y la fecha de última conexión. Las contraseñas no vienen en
+esos archivos: se piden al conectar. Si importas otra vez, se actualizan en lugar de duplicarse.
+
+Importante: un equipo con RealVNC Server sólo acepta, por defecto, el cifrado propio de RealVNC,
+que Enlace no puede usar. Para conectar a él hay que instalar Enlace Servidor en ese equipo o, en
+RealVNC Server, poner el cifrado en «preferir desactivado» y la autenticación en «contraseña VNC».
 
 Si en el equipo remoto también está RealVNC Server, los dos querrán el puerto 5900:
 cierra uno o cambia el puerto en *Configuración* (en el visor escribe `IP:puerto`).

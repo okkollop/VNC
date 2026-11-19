@@ -12,12 +12,9 @@ internal sealed class ViewerForm : Form
     private readonly string _hostLabel;
     private readonly RemoteSurface _surface;
     private readonly Panel _scroll = new() { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Color.Black };
-    private readonly ToolStrip _bar = new() { GripStyle = ToolStripGripStyle.Hidden, TabStop = false };
-    private readonly ToolStripButton _fitBtn = new("Ajustar a la ventana") { CheckOnClick = true };
-    private readonly ToolStripButton _fullBtn = new("Pantalla completa");
-    private readonly ToolStripButton _syncBtn = new("Archivos por portapapeles") { CheckOnClick = true };
-    private readonly StatusStrip _statusBar = new();
-    private readonly ToolStripStatusLabel _status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+    private readonly FloatingBar _bar = new();
+    private readonly Toast _toast = new();
+    private readonly System.Windows.Forms.Timer _track = new() { Interval = 120 };
     private readonly ClipboardBridge _clip;
     private readonly KeyboardHook _hook;
     private bool _fullscreen;
@@ -39,33 +36,36 @@ internal sealed class ViewerForm : Form
         _surface.RemoteSizeChanged += ApplyLayout;
         _hook = new KeyboardHook(_surface.SendKey);
 
-        _fitBtn.Checked = cfg.FitToWindow;
-        _fitBtn.CheckedChanged += (_, _) => { _cfg.FitToWindow = _fitBtn.Checked; _cfg.Save(); ApplyLayout(); };
-        _fullBtn.Click += (_, _) => ToggleFullscreen();
-        _syncBtn.Checked = cfg.SyncClipboardFiles;
-        _syncBtn.ToolTipText = "Al copiar archivos en un equipo, se pueden pegar en el otro";
-        _syncBtn.CheckedChanged += (_, _) => { _cfg.SyncClipboardFiles = _syncBtn.Checked; _cfg.Save(); };
-        var sendBtn = new ToolStripButton("Enviar archivos…");
-        sendBtn.Click += (_, _) => PickAndSend();
-        var folderBtn = new ToolStripButton("Carpeta de recibidos");
-        folderBtn.Click += (_, _) => OpenFolder(AppPaths.ReceivedFolder);
-        var cadBtn = new ToolStripButton("Ctrl+Alt+Supr") { ToolTipText = "Envía Ctrl+Alt+Supr (Windows sólo lo permite a servicios del sistema: puede no tener efecto)" };
-        cadBtn.Click += (_, _) => SendCombo(KeyMap.XK_Control_L, KeyMap.XK_Alt_L, 0xFFFF);
-        var winBtn = new ToolStripButton("Tecla Windows");
-        winBtn.Click += (_, _) => SendCombo(KeyMap.XK_Super_L);
-        foreach (ToolStripItem i in new ToolStripItem[] { _fitBtn, _fullBtn, new ToolStripSeparator(), sendBtn, folderBtn, _syncBtn, new ToolStripSeparator(), winBtn, cadBtn })
-            _bar.Items.Add(i);
-        foreach (ToolStripItem i in _bar.Items) i.MouseUp += (_, _) => _surface.Focus();
+        _bar.SetItems(new[]
+        {
+            new BarItem { Icon = BarIcon.Fullscreen, Tip = "Pantalla completa", Click = ToggleFullscreen,
+                          DynamicIcon = () => _fullscreen ? BarIcon.ExitFullscreen : BarIcon.Fullscreen },
+            new BarItem { Icon = BarIcon.Fit, Tip = "Ajustar a la ventana / tamaño real", IsChecked = () => _cfg.FitToWindow,
+                          Click = () => { _cfg.FitToWindow = !_cfg.FitToWindow; _cfg.Save(); ApplyLayout(); }, SeparatorAfter = true },
+            new BarItem { Icon = BarIcon.CtrlAltDel, Tip = "Enviar Ctrl+Alt+Supr (puede no tener efecto: Windows lo reserva al sistema)",
+                          Click = () => SendCombo(KeyMap.XK_Control_L, KeyMap.XK_Alt_L, 0xFFFF) },
+            new BarItem { Icon = BarIcon.WinKey, Tip = "Enviar tecla Windows", Click = () => SendCombo(KeyMap.XK_Super_L), SeparatorAfter = true },
+            new BarItem { Icon = BarIcon.SendFiles, Tip = "Enviar archivos al equipo remoto (Descargas\\Enlace)", Click = PickAndSend },
+            new BarItem { Icon = BarIcon.Folder, Tip = "Abrir carpeta de recibidos", Click = () => OpenFolder(AppPaths.ReceivedFolder) },
+            new BarItem { Icon = BarIcon.ClipboardFiles, Tip = "Copiar y pegar archivos entre equipos (activado/desactivado)", IsChecked = () => _cfg.SyncClipboardFiles,
+                          Click = () => { _cfg.SyncClipboardFiles = !_cfg.SyncClipboardFiles; _cfg.Save();
+                                          ShowToast(_cfg.SyncClipboardFiles ? "Copiar y pegar archivos: activado" : "Copiar y pegar archivos: desactivado"); },
+                          SeparatorAfter = true },
+            new BarItem { Icon = BarIcon.Close, Tip = "Desconectar", Click = Close },
+        });
+        _bar.MouseUp += (_, _) => { _bar.Invalidate(); _surface.Focus(); };
+        _track.Tick += (_, _) => _bar.Track(PointToClient(Cursor.Position), Form.ActiveForm == this);
 
-        _statusBar.Items.Add(_status);
         _scroll.Controls.Add(_surface);
         Controls.Add(_scroll);
         Controls.Add(_bar);
-        Controls.Add(_statusBar);
+        Controls.Add(_toast);
+        _bar.BringToFront();
+        Resize += (_, _) => { _bar.CenterIn(ClientSize); _toast.Reposition(); };
 
         // Tamaño inicial: la pantalla remota cabiendo en el 90 % del área de trabajo
         var wa = Screen.FromPoint(Cursor.Position).WorkingArea;
-        int chromeH = 120;
+        int chromeH = 60;
         double s = Math.Min(1.0, Math.Min(wa.Width * 0.9 / Math.Max(1, client.Width), (wa.Height * 0.9 - chromeH) / Math.Max(1, client.Height)));
         ClientSize = new Size(Math.Max(640, (int)(client.Width * s)), Math.Max(400, (int)(client.Height * s) + chromeH / 2));
         StartPosition = FormStartPosition.CenterScreen;
@@ -120,16 +120,20 @@ internal sealed class ViewerForm : Form
         try { BeginInvoke(a); } catch (InvalidOperationException) { }
     }
 
-    private void SetStatus(string s) => _status.Text = s;
+    private void SetStatus(string s) => ShowToast(s);
 
-    private void UpdateDefaultStatus() =>
-        SetStatus($"Conectado a {_hostLabel} — {_c.Width}×{_c.Height}" +
-                  (_c.Ext.Active ? "" : "   (servidor VNC estándar: sin transferencia de archivos)"));
+    private void ShowToast(string s, int ms = 4000) => _toast.ShowText(s, ms);
+
+    private void UpdateDefaultStatus() { }
 
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
         _c.Start(); // a partir de aquí llegan imagen y eventos
+        _bar.CenterIn(ClientSize);
+        _bar.Peek(2500);
+        _track.Start();
+        ShowToast($"Conectado a {_hostLabel} — {_c.Width}×{_c.Height}", 3000);
         _surface.Focus();
     }
 
@@ -149,8 +153,8 @@ internal sealed class ViewerForm : Form
 
     private void ApplyLayout()
     {
-        _surface.Fit = _fitBtn.Checked;
-        if (_fitBtn.Checked)
+        _surface.Fit = _cfg.FitToWindow;
+        if (_cfg.FitToWindow)
         {
             _scroll.AutoScroll = false;
             _surface.Dock = DockStyle.Fill;
@@ -175,16 +179,13 @@ internal sealed class ViewerForm : Form
             WindowState = FormWindowState.Normal;
             FormBorderStyle = FormBorderStyle.None;
             WindowState = FormWindowState.Maximized;
-            _statusBar.Visible = false;
-            _fullBtn.Text = "Salir de pantalla completa";
         }
         else
         {
             FormBorderStyle = FormBorderStyle.Sizable;
             WindowState = _prevState;
-            _statusBar.Visible = true;
-            _fullBtn.Text = "Pantalla completa";
         }
+        _bar.Invalidate();
         _surface.Focus();
     }
 
@@ -266,6 +267,7 @@ internal sealed class ViewerForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _closing = true;
+        _track.Stop();
         _hook.Dispose();
         _c.TextReceived -= _clip.SetRemoteText;
         _c.Ext.TextReceived -= _clip.SetRemoteText;

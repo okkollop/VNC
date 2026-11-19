@@ -37,7 +37,7 @@ internal sealed class RemoteSurface : Control
         TabStop = true;
         BackColor = Color.Black;
         _attrs.SetWrapMode(WrapMode.TileFlipXY);
-        Cursor = MakeDotCursor();
+        Cursor = Cursors.Arrow;
 
         lock (_c.FramebufferLock) lock (_bmpLock) _bmp = NewBitmap(_c.Width, _c.Height);
         _c.Updated += OnRemoteUpdated;
@@ -55,19 +55,6 @@ internal sealed class RemoteSurface : Control
     }
 
     private static Bitmap NewBitmap(int w, int h) => new(Math.Max(1, w), Math.Max(1, h), PixelFormat.Format32bppRgb);
-
-    /// <summary>Cursor local pequeño: el cursor real se ve dibujado en la imagen remota.</summary>
-    private static Cursor MakeDotCursor()
-    {
-        using var b = new Bitmap(32, 32, PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(b))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.FillEllipse(Brushes.White, 13, 13, 6, 6);
-            g.DrawEllipse(Pens.Black, 13, 13, 6, 6);
-        }
-        return new Cursor(b.GetHicon());
-    }
 
     // ---------------- Imagen ----------------
 

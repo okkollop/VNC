@@ -83,8 +83,10 @@ public sealed class RfbClient : IDisposable
             var types = _in.ReadBytes(n);
             if (types.Contains(Rfb.SecVncAuth)) sec = Rfb.SecVncAuth;
             else if (types.Contains(Rfb.SecNone)) sec = Rfb.SecNone;
-            else throw new RfbException("El servidor sólo admite seguridad no compatible (p. ej. cifrado propio de RealVNC). " +
-                                        "Configúralo para permitir autenticación VNC estándar.");
+            else throw new RfbException(
+                "Este equipo sólo acepta el cifrado propio de RealVNC, que Enlace no puede usar.\n\n" +
+                "Opciones: instalar Enlace Servidor en ese equipo, o en RealVNC Server ir a Opciones > Seguridad y poner " +
+                "Cifrado = «Preferir desactivado» y Autenticación = «Contraseña VNC» (y definir esa contraseña).");
             _net.WriteByte(sec);
         }
         else

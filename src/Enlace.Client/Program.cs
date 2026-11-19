@@ -8,7 +8,6 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
-        AppPaths.CleanClipboardFolder();
-        Application.Run(new ConnectForm());
+        Application.Run(new BookForm());
     }
 }

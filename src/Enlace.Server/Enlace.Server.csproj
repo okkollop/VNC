@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>..\..\assets\enlace.ico</ApplicationIcon>
+    <AssemblyName>EnlaceServidor</AssemblyName>
+    <RootNamespace>Enlace.Server</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Enlace.Windows.Tests" />
+    <ProjectReference Include="..\Enlace.Windows\Enlace.Windows.csproj" />
+  </ItemGroup>
+</Project>

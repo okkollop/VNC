@@ -40,20 +40,15 @@ Cada versión va firmada: si la firma o la huella del archivo no coinciden, no s
 
 1. En GitHub: **Actions → Publicar versión → Run workflow**. Escribe el número (p. ej. `1.0.1`,
    siempre mayor que el anterior) y qué cambia.
-2. GitHub compila, firma y:
-   - si están configurados los secretos SFTP, sube los archivos a la web solo;
-   - si no, deja un artefacto `InfollopAssist-<versión>-actualizacion` con tres archivos
-     (`InfollopAssistServidor.exe`, `InfollopAssistVisor.exe`, `version.json`) que hay que subir a
-     la carpeta `infollopassist` de soporte.infollop.net (primero los dos `.exe`, al final `version.json`).
+2. GitHub compila, firma y publica una *release* `v<versión>` con tres archivos
+   (`InfollopAssistServidor.exe`, `InfollopAssistVisor.exe`, `version.json`).
+3. El servidor de soporte.infollop.net comprueba cada 10 minutos la última release y copia
+   los archivos a `infollopassist/` (primero los dos `.exe`, al final `version.json`).
+   Script: `/usr/local/bin/infollopassist-sync.sh`; registro en `/var/log/infollopassist-sync.log`.
 
-Secretos de GitHub (Settings → Secrets and variables → Actions → New repository secret):
-
-| Nombre | Qué es |
-|---|---|
-| `INFOLLOP_CLAVE` | Clave privada de firma (obligatoria). Guárdala también fuera de GitHub: sin ella no se pueden publicar actualizaciones. |
-| `SFTP_HOST` | Servidor SFTP (opcional), p. ej. `soporte.infollop.net` |
-| `SFTP_USUARIO` / `SFTP_CONTRASENA` | Usuario y contraseña SFTP de Plesk (opcional) |
-| `SFTP_RUTA` | Carpeta destino, p. ej. `soporte.infollop.net/infollopassist` (opcional) |
+Único secreto de GitHub (Settings → Secrets and variables → Actions → New repository secret):
+`INFOLLOP_CLAVE`, la clave privada de firma. Guárdala también fuera de GitHub: sin ella no se pueden
+publicar actualizaciones. Nunca la subas al repositorio, que es público.
 
 ## Limitaciones
 

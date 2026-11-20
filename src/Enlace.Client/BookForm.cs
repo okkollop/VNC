@@ -22,7 +22,7 @@ internal sealed class BookForm : Form
 
     public BookForm()
     {
-        Text = "Enlace — Visor";
+        Text = "InfollopAssist Visor";
         Icon = AppIcon.Get();
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(940, 640);
@@ -414,7 +414,7 @@ internal sealed class BookForm : Form
         viewer.FormClosed += (_, _) =>
         {
             if (viewer.DisconnectError != null)
-                MessageBox.Show(this, $"Se perdió la conexión con {entry.Name}:\n{viewer.DisconnectError}", "Enlace", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, $"Se perdió la conexión con {entry.Name}:\n{viewer.DisconnectError}", "InfollopAssist", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             viewer.Dispose();
         };
         _viewers.Add(viewer);

@@ -19,7 +19,7 @@ public interface IDesktop
 
 public sealed class RfbServerOptions
 {
-    public string Name { get; set; } = "Enlace";
+    public string Name { get; set; } = "InfollopAssist";
     public Func<string> Password { get; set; } = () => "";
     public int MinFrameIntervalMs { get; set; } = 33;
     public bool ViewOnly { get; set; }

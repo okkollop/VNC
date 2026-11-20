@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Enlace.Protocol\Enlace.Protocol.csproj" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    <EmbeddedResource Include="..\..\assets\enlace.ico" LogicalName="enlace.ico" />
+    <EmbeddedResource Include="..\..\assets\infollopassist.ico" LogicalName="infollopassist.ico" />
+    <EmbeddedResource Include="..\..\assets\logo.png" LogicalName="logo.png" />
   </ItemGroup>
 </Project>

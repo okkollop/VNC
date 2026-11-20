@@ -4,8 +4,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <ApplicationIcon>..\..\assets\enlace.ico</ApplicationIcon>
-    <AssemblyName>EnlaceServidor</AssemblyName>
+    <ApplicationIcon>..\..\assets\infollopassist.ico</ApplicationIcon>
+    <AssemblyName>InfollopAssistServidor</AssemblyName>
     <RootNamespace>Enlace.Server</RootNamespace>
   </PropertyGroup>
   <ItemGroup>

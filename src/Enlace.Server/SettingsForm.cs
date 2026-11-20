@@ -18,7 +18,7 @@ internal sealed class SettingsForm : Form
     {
         _cfg = cfg;
         _requirePassword = firstRun || cfg.Password == null;
-        Text = "Enlace Servidor — Configuración";
+        Text = "InfollopAssist Servidor — Configuración";
         Icon = AppIcon.Get();
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;

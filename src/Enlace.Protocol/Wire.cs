@@ -113,7 +113,7 @@ public readonly record struct RectI(int X, int Y, int Width, int Height)
 
 public static class Rfb
 {
-    public const int DefaultPort = 5900;
+    public const int DefaultPort = 6900;
 
     // Tipos de seguridad
     public const byte SecInvalid = 0, SecNone = 1, SecVncAuth = 2;

@@ -6,6 +6,34 @@ using System.Text.Json;
 
 namespace Enlace.Windows;
 
+/// <summary>Nombre, versión y copyright que se muestran en los programas.</summary>
+public static class Brand
+{
+    public const string Product = "InfollopAssist";
+    public const string ServerName = "InfollopAssist Servidor";
+    public const string ViewerName = "InfollopAssist Visor";
+    public const string Copyright = "© 2026 Infollop. Todos los derechos reservados.";
+
+    public static Version Version =>
+        typeof(Brand).Assembly.GetName().Version ?? new Version(1, 0, 0);
+
+    public static string VersionText => $"{Version.Major}.{Version.Minor}.{Version.Build}";
+
+    /// <summary>Logo grande (PNG) para las pantallas de "Acerca de".</summary>
+    public static Image? Logo()
+    {
+        using var s = typeof(Brand).Assembly.GetManifestResourceStream("logo.png");
+        return s == null ? null : Image.FromStream(new MemoryStream(ReadAll(s)));
+    }
+
+    private static byte[] ReadAll(Stream s)
+    {
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
+    }
+}
+
 public static class AppIcon
 {
     private static Icon? _icon;
@@ -13,7 +41,7 @@ public static class AppIcon
     public static Icon Get()
     {
         if (_icon != null) return _icon;
-        using var s = typeof(AppIcon).Assembly.GetManifestResourceStream("enlace.ico");
+        using var s = typeof(AppIcon).Assembly.GetManifestResourceStream("infollopassist.ico");
         _icon = s != null ? new Icon(s) : SystemIcons.Application;
         return _icon;
     }
@@ -43,16 +71,24 @@ public static class AppPaths
     {
         get
         {
-            var d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Enlace");
-            Directory.CreateDirectory(d);
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var d = Path.Combine(appData, "InfollopAssist");
+            if (!Directory.Exists(d))
+            {
+                Directory.CreateDirectory(d);
+                // Versiones anteriores (Enlace): conservar libreta y configuración
+                var old = Path.Combine(appData, "Enlace");
+                if (Directory.Exists(old))
+                    foreach (var f in Directory.GetFiles(old)) File.Copy(f, Path.Combine(d, Path.GetFileName(f)), false);
+            }
             return d;
         }
     }
 
     public static string ReceivedFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Enlace");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "InfollopAssist");
 
-    public static string ClipboardFolder => Path.Combine(Path.GetTempPath(), "Enlace", "Portapapeles");
+    public static string ClipboardFolder => Path.Combine(Path.GetTempPath(), "InfollopAssist", "Portapapeles");
 
     /// <summary>Borra copias temporales de archivos pegados de hace más de un día.</summary>
     public static void CleanClipboardFolder()

@@ -43,7 +43,7 @@ internal sealed class ServerTray : ApplicationContext
         menu.Items.Add("Salir", null, (_, _) => Exit());
         menu.Opening += (_, _) => RefreshMenu();
 
-        _tray = new NotifyIcon { Icon = AppIcon.Small(), ContextMenuStrip = menu, Visible = true, Text = "Enlace Servidor" };
+        _tray = new NotifyIcon { Icon = AppIcon.Small(), ContextMenuStrip = menu, Visible = true, Text = "InfollopAssist Servidor" };
         _tray.DoubleClick += (_, _) => ShowSettings();
         _tray.BalloonTipClicked += (_, _) => { if (_lastBalloonFolder != null) OpenFolder(_lastBalloonFolder); };
 
@@ -67,13 +67,13 @@ internal sealed class ServerTray : ApplicationContext
         try
         {
             _server.Start(_cfg.Port);
-            _tray.Text = $"Enlace Servidor — puerto {_cfg.Port}";
+            _tray.Text = $"InfollopAssist Servidor — puerto {_cfg.Port}";
         }
         catch (SocketException ex)
         {
-            _tray.Text = "Enlace Servidor — sin escuchar";
+            _tray.Text = "InfollopAssist Servidor — sin escuchar";
             MessageBox.Show($"No se pudo abrir el puerto {_cfg.Port}: {ex.Message}\n\n¿Hay otro VNC (p. ej. RealVNC) usando ese puerto? " +
-                            "Ciérralo o cambia el puerto en Configuración.", "Enlace Servidor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            "Ciérralo o cambia el puerto en Configuración.", "InfollopAssist Servidor", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -87,7 +87,7 @@ internal sealed class ServerTray : ApplicationContext
         s.Ext.BatchReceived += b =>
         {
             if (b.Target == FileTarget.Clipboard) _clip.SetRemoteFiles(b.TopLevelPaths);
-            else _ui.Post(_ => Notify($"Recibidos {b.FileCount} archivo(s), {AppPaths.FormatBytes(b.TotalBytes)} en Descargas\\Enlace", folder: AppPaths.ReceivedFolder), null);
+            else _ui.Post(_ => Notify($"Recibidos {b.FileCount} archivo(s), {AppPaths.FormatBytes(b.TotalBytes)} en Descargas\\InfollopAssist", folder: AppPaths.ReceivedFolder), null);
         };
         s.Ext.TransferFailed += msg => _ui.Post(_ => Notify("Transferencia fallida: " + msg, ToolTipIcon.Warning), null);
     }
@@ -127,7 +127,7 @@ internal sealed class ServerTray : ApplicationContext
     private void Notify(string text, ToolTipIcon icon = ToolTipIcon.Info, string? folder = null)
     {
         _lastBalloonFolder = folder;
-        _tray.ShowBalloonTip(4000, "Enlace Servidor", text, icon);
+        _tray.ShowBalloonTip(4000, "InfollopAssist Servidor", text, icon);
     }
 
     private static void OpenFolder(string path)

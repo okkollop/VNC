@@ -8,7 +8,7 @@ internal static class Program
         using var mutex = new Mutex(true, @"Local\Enlace.Servidor", out bool first);
         if (!first)
         {
-            MessageBox.Show("Enlace Servidor ya está en marcha (icono junto al reloj).", "Enlace Servidor");
+            MessageBox.Show("InfollopAssist Servidor ya está en marcha (icono junto al reloj).", "InfollopAssist Servidor");
             return;
         }
 

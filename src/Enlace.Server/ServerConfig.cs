@@ -8,7 +8,7 @@ internal sealed class ServerConfig
 {
     private const string File = "servidor.json";
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string RunName = "EnlaceServidor";
+    private const string RunName = "InfollopAssistServidor";
 
     public int Port { get; set; } = Rfb.DefaultPort;
     public string? ProtectedPassword { get; set; }

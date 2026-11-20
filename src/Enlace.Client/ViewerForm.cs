@@ -27,7 +27,7 @@ internal sealed class ViewerForm : Form
         _c = client;
         _cfg = cfg;
         _hostLabel = hostLabel;
-        Text = $"{client.DesktopName} ({hostLabel}) — Enlace";
+        Text = $"{client.DesktopName} ({hostLabel}) — InfollopAssist";
         Icon = AppIcon.Get();
         KeyPreview = false;
         AllowDrop = true;
@@ -45,7 +45,7 @@ internal sealed class ViewerForm : Form
             new BarItem { Icon = BarIcon.CtrlAltDel, Tip = "Enviar Ctrl+Alt+Supr (puede no tener efecto: Windows lo reserva al sistema)",
                           Click = () => SendCombo(KeyMap.XK_Control_L, KeyMap.XK_Alt_L, 0xFFFF) },
             new BarItem { Icon = BarIcon.WinKey, Tip = "Enviar tecla Windows", Click = () => SendCombo(KeyMap.XK_Super_L), SeparatorAfter = true },
-            new BarItem { Icon = BarIcon.SendFiles, Tip = "Enviar archivos al equipo remoto (Descargas\\Enlace)", Click = PickAndSend },
+            new BarItem { Icon = BarIcon.SendFiles, Tip = "Enviar archivos al equipo remoto (Descargas\\InfollopAssist)", Click = PickAndSend },
             new BarItem { Icon = BarIcon.Folder, Tip = "Abrir carpeta de recibidos", Click = () => OpenFolder(AppPaths.ReceivedFolder) },
             new BarItem { Icon = BarIcon.ClipboardFiles, Tip = "Copiar y pegar archivos entre equipos (activado/desactivado)", IsChecked = () => _cfg.SyncClipboardFiles,
                           Click = () => { _cfg.SyncClipboardFiles = !_cfg.SyncClipboardFiles; _cfg.Save();
@@ -88,7 +88,7 @@ internal sealed class ViewerForm : Form
                 _clip.SetRemoteFiles(b.TopLevelPaths);
                 SetStatus($"{b.FileCount} archivo(s) del otro equipo listos para pegar ({AppPaths.FormatBytes(b.TotalBytes)})");
             }
-            else SetStatus($"Recibidos {b.FileCount} archivo(s) en Descargas\\Enlace");
+            else SetStatus($"Recibidos {b.FileCount} archivo(s) en Descargas\\InfollopAssist");
         });
         _c.Ext.Progress += p => UI(() => SetStatus(
             $"{(p.Sending ? "Enviando" : "Recibiendo")} {p.Files} archivo(s): {AppPaths.FormatBytes(p.Done)} de {AppPaths.FormatBytes(p.Total)}" +
@@ -201,7 +201,7 @@ internal sealed class ViewerForm : Form
     private bool CheckExt()
     {
         if (_c.Ext.Active) return true;
-        MessageBox.Show(this, "El equipo remoto no es un servidor Enlace: sólo se puede ver, controlar y copiar texto.",
+        MessageBox.Show(this, "El equipo remoto no es un servidor InfollopAssist: sólo se puede ver, controlar y copiar texto.",
             Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         return false;
     }
@@ -209,7 +209,7 @@ internal sealed class ViewerForm : Form
     private void PickAndSend()
     {
         if (!CheckExt()) return;
-        using var d = new OpenFileDialog { Multiselect = true, Title = "Archivos para enviar al equipo remoto (Descargas\\Enlace)" };
+        using var d = new OpenFileDialog { Multiselect = true, Title = "Archivos para enviar al equipo remoto (Descargas\\InfollopAssist)" };
         if (d.ShowDialog(this) == DialogResult.OK) Send(d.FileNames, FileTarget.Folder);
     }
 
@@ -249,7 +249,7 @@ internal sealed class ViewerForm : Form
             await _c.Ext.SendFilesAsync(files, target);
             UI(() => SetStatus(target == FileTarget.Clipboard
                 ? "Archivos copiados: ya puedes pegarlos en el equipo remoto"
-                : "Archivos enviados a Descargas\\Enlace del equipo remoto"));
+                : "Archivos enviados a Descargas\\InfollopAssist del equipo remoto"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {

@@ -87,8 +87,8 @@ public sealed class RfbClient : IDisposable
             if (types.Contains(Rfb.SecVncAuth)) sec = Rfb.SecVncAuth;
             else if (types.Contains(Rfb.SecNone)) sec = Rfb.SecNone;
             else throw new RfbException(
-                "Este equipo sólo acepta el cifrado propio de RealVNC, que Enlace no puede usar.\n\n" +
-                "Opciones: instalar Enlace Servidor en ese equipo, o en RealVNC Server ir a Opciones > Seguridad y poner " +
+                "Este equipo sólo acepta el cifrado propio de RealVNC, que InfollopAssist no puede usar.\n\n" +
+                "Opciones: instalar InfollopAssist Servidor en ese equipo, o en RealVNC Server ir a Opciones > Seguridad y poner " +
                 "Cifrado = «Preferir desactivado» y Autenticación = «Contraseña VNC» (y definir esa contraseña).");
             _net.WriteByte(sec);
         }

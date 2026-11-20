@@ -4,8 +4,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <Company>Enlace</Company>
-    <Product>Enlace Escritorio Remoto</Product>
-    <Version>0.1.0</Version>
+    <Company>Infollop</Company>
+    <Product>InfollopAssist</Product>
+    <Copyright>© 2026 Infollop. Todos los derechos reservados.</Copyright>
+    <!-- Versión de InfollopAssist: subirla en cada publicación (las actualizaciones automáticas la comparan) -->
+    <Version>1.0.0</Version>
   </PropertyGroup>
 </Project>

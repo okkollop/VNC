@@ -44,10 +44,10 @@ public sealed class ExtChannel : IDisposable
     public bool Active { get; private set; }
 
     /// <summary>Carpeta donde se guardan los archivos enviados con <see cref="FileTarget.Folder"/>.</summary>
-    public string ReceiveFolder { get; set; } = Path.Combine(Path.GetTempPath(), "Enlace", "Recibidos");
+    public string ReceiveFolder { get; set; } = Path.Combine(Path.GetTempPath(), "InfollopAssist", "Recibidos");
 
     /// <summary>Raíz temporal para archivos que van al portapapeles.</summary>
-    public string ClipboardFolder { get; set; } = Path.Combine(Path.GetTempPath(), "Enlace", "Portapapeles");
+    public string ClipboardFolder { get; set; } = Path.Combine(Path.GetTempPath(), "InfollopAssist", "Portapapeles");
 
     public event Action? Activated;
     public event Action<string>? TextReceived;

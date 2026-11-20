@@ -57,16 +57,16 @@ public class BookTests
 public class HostAddressTests
 {
     [Theory]
-    [InlineData("192.168.1.20", "192.168.1.20", 5900)]
-    [InlineData(" pc-oficina ", "pc-oficina", 5900)]
+    [InlineData("192.168.1.20", "192.168.1.20", 6900)]
+    [InlineData(" pc-oficina ", "pc-oficina", 6900)]
     [InlineData("192.168.1.20:1", "192.168.1.20", 5901)]
     [InlineData("192.168.1.20:5905", "192.168.1.20", 5905)]
     [InlineData("192.168.1.20::5999", "192.168.1.20", 5999)]
     [InlineData("pc::5999", "pc", 5999)]
     [InlineData("[fe80::1]:6000", "fe80::1", 6000)]
-    [InlineData("[fe80::1]", "fe80::1", 5900)]
-    [InlineData("fe80::1", "fe80::1", 5900)]
-    [InlineData("equipo.ejemplo.com", "equipo.ejemplo.com", 5900)]
+    [InlineData("[fe80::1]", "fe80::1", 6900)]
+    [InlineData("fe80::1", "fe80::1", 6900)]
+    [InlineData("equipo.ejemplo.com", "equipo.ejemplo.com", 6900)]
     public void Parses(string input, string host, int port)
     {
         Assert.True(HostAddress.TryParse(input, out var h, out var p));

@@ -35,6 +35,6 @@ internal sealed class ClientConfig
 
     public void Save() => AppPaths.SaveJson(File, this);
 
-    /// <summary>"equipo", "equipo:5901", "192.168.1.5::5900" o "[fe80::1]:5900".</summary>
+    /// <summary>"equipo" (puerto 6900), "equipo:7000", "192.168.1.5::5900" o "[fe80::1]:6900".</summary>
     public static bool TryParseHost(string input, out string host, out int port) => HostAddress.TryParse(input, out host, out port);
 }

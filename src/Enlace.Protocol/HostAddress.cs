@@ -2,7 +2,7 @@ namespace Enlace.Protocol;
 
 public static class HostAddress
 {
-    /// <summary>"equipo", "equipo:5901", "192.168.1.5::5900" o "[fe80::1]:5900".</summary>
+    /// <summary>"equipo" (puerto 6900), "equipo:7000", "192.168.1.5::5900" o "[fe80::1]:6900".</summary>
     public static bool TryParse(string input, out string host, out int port)
     {
         input = input.Trim();
@@ -38,7 +38,7 @@ public static class HostAddress
             host = input[..colon];
             if (!int.TryParse(input[(colon + 1)..], out int p)) return false;
             // Estilo VNC: ":1" significa pantalla 1 = puerto 5901
-            port = p < 100 ? Rfb.DefaultPort + p : p;
+            port = p < 100 ? 5900 + p : p; // convención VNC: ":1" = pantalla 1 = 5901
             return port is > 0 and < 65536;
         }
         return true; // nombre o IPv6 sin puerto

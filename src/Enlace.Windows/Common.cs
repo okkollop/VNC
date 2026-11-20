@@ -57,6 +57,17 @@ public static class Secret
     public static string Protect(string plain) =>
         Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), Entropy, DataProtectionScope.CurrentUser));
 
+    /// <summary>Cifrado ligado al equipo (lo puede leer el servicio y cualquier sesión de este PC).</summary>
+    public static string ProtectMachine(string plain) =>
+        Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), Entropy, DataProtectionScope.LocalMachine));
+
+    public static string? UnprotectMachine(string? b64)
+    {
+        if (string.IsNullOrEmpty(b64)) return null;
+        try { return Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(b64), Entropy, DataProtectionScope.LocalMachine)); }
+        catch { return null; }
+    }
+
     public static string? Unprotect(string? b64)
     {
         if (string.IsNullOrEmpty(b64)) return null;
@@ -81,6 +92,17 @@ public static class AppPaths
                 if (Directory.Exists(old))
                     foreach (var f in Directory.GetFiles(old)) File.Copy(f, Path.Combine(d, Path.GetFileName(f)), false);
             }
+            return d;
+        }
+    }
+
+    /// <summary>Configuración común del equipo (C:\ProgramData\InfollopAssist).</summary>
+    public static string MachineConfigDir
+    {
+        get
+        {
+            var d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "InfollopAssist");
+            Directory.CreateDirectory(d);
             return d;
         }
     }

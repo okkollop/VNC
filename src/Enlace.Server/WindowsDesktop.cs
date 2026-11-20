@@ -19,11 +19,39 @@ internal sealed class WindowsDesktop : IDesktop, IDisposable
     private Rectangle _vs;
 
     private readonly object _inLock = new();
+
+    /// <summary>Modo servicio: seguir al escritorio activo (inicio de sesión, bloqueo, UAC).</summary>
+    public bool AllowDesktopSwitch { get; init; }
+
+    /// <summary>Se dispara al recibir Ctrl+Alt+Supr (el agente lo convierte en la señal real de Windows).</summary>
+    public event Action? SecureAttention;
+
+    [ThreadStatic] private static IntPtr _threadDesk;
+    [ThreadStatic] private static string? _threadDeskName;
+
+    /// <summary>Cambia el hilo actual al escritorio que recibe la entrada si ha cambiado (p. ej. de Default a Winlogon).</summary>
+    private void FollowInputDesktop()
+    {
+        if (!AllowDesktopSwitch) return;
+        var h = DesktopApi.OpenInputDesktop(0, false, DesktopApi.GENERIC_ALL);
+        if (h == IntPtr.Zero) return;
+        var name = DesktopApi.NameOf(h);
+        if (name == _threadDeskName) { DesktopApi.CloseDesktop(h); return; }
+        if (DesktopApi.SetThreadDesktop(h))
+        {
+            if (_threadDesk != IntPtr.Zero) DesktopApi.CloseDesktop(_threadDesk);
+            _threadDesk = h;
+            _threadDeskName = name;
+            lock (_capLock) _lastCapture = -1000; // forzar captura nueva
+        }
+        else DesktopApi.CloseDesktop(h);
+    }
     private int _lastMask;
     private readonly Dictionary<uint, (ushort Vk, bool Ext, string? Text)> _pressed = new();
 
     public bool CaptureInto(ref int[] buffer, out int width, out int height)
     {
+        FollowInputDesktop();
         lock (_capLock)
         {
             long now = Environment.TickCount64;
@@ -98,6 +126,7 @@ internal sealed class WindowsDesktop : IDesktop, IDisposable
 
     public void Pointer(int x, int y, int mask)
     {
+        FollowInputDesktop();
         var vs = SystemInformation.VirtualScreen;
         int ax = vs.Width > 1 ? (int)((long)x * 65535 / (vs.Width - 1)) : 0;
         int ay = vs.Height > 1 ? (int)((long)y * 65535 / (vs.Height - 1)) : 0;
@@ -154,6 +183,13 @@ internal sealed class WindowsDesktop : IDesktop, IDisposable
 
     public void Key(uint keysym, bool down)
     {
+        FollowInputDesktop();
+        // Ctrl+Alt+Supr: Windows no deja simularlo con teclas; se pide la secuencia segura al sistema
+        if (down && keysym is 0xFFFF or 0xFF9F && Down(0x11) && Down(0x12) && SecureAttention != null)
+        {
+            SecureAttention();
+            return;
+        }
         lock (_inLock)
         {
             if (!down)
@@ -217,5 +253,26 @@ internal sealed class WindowsDesktop : IDesktop, IDisposable
     public void Dispose()
     {
         lock (_capLock) _bmp?.Dispose();
+    }
+}
+
+internal static class DesktopApi
+{
+    public const uint GENERIC_ALL = 0x10000000;
+    private const int UOI_NAME = 2;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetThreadDesktop(IntPtr hDesktop);
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern bool CloseDesktop(IntPtr hDesktop);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern bool GetUserObjectInformationW(IntPtr h, int index, char[] buf, int len, out int needed);
+
+    public static string NameOf(IntPtr h)
+    {
+        var buf = new char[256];
+        return GetUserObjectInformationW(h, UOI_NAME, buf, buf.Length * 2, out _) ? new string(buf).TrimEnd('\0') : "";
     }
 }

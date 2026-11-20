@@ -140,6 +140,13 @@ public class LoopbackTests : IDisposable
         session.SendClipboardText("Adiós 日本");
         WaitUntil(() => atServer == "Hola ñandú €" && atClient == "Adiós 日本", "portapapeles");
 
+        (string, string)? chatAtServer = null, chatAtClient = null;
+        session.Ext.ChatReceived += (f, t) => chatAtServer = (f, t);
+        c.Ext.ChatReceived += (f, t) => chatAtClient = (f, t);
+        c.Ext.SendChat("Técnico", "¿Puedes cerrar el Excel?\nGracias");
+        session.Ext.SendChat("Ana", "Hecho 👍");
+        WaitUntil(() => chatAtServer == ("Técnico", "¿Puedes cerrar el Excel?\nGracias") && chatAtClient == ("Ana", "Hecho 👍"), "chat");
+
         // Archivos: carpeta con subcarpeta y archivo grande del cliente al servidor
         var src = Path.Combine(_tmp, "origen");
         Directory.CreateDirectory(Path.Combine(src, "Fotos", "vacía"));

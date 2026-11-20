@@ -31,8 +31,37 @@ jobs:
           }
           Copy-Item LEEME.md dist/
 
+      - name: Prueba del modo servicio (instalar, escuchar en 6900, quitar)
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path dist/InfollopAssistServidor.exe).Path
+          $p = Start-Process $exe -ArgumentList '--instalar-servicio' -Wait -PassThru
+          "Instalar: código $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { Get-Content C:\ProgramData\InfollopAssist\servidor.log -ErrorAction SilentlyContinue; exit 1 }
+          (Get-Service InfollopAssist).Status
+          $ok = $false
+          for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
+            Start-Sleep 1
+            try {
+              $c = New-Object Net.Sockets.TcpClient('127.0.0.1', 6900)
+              $buf = New-Object byte[] 12
+              $n = $c.GetStream().Read($buf, 0, 12)
+              $banner = [Text.Encoding]::ASCII.GetString($buf, 0, $n)
+              "Respuesta en 6900: $banner"
+              $ok = $banner.StartsWith('RFB 003.008')
+              $c.Close()
+            } catch { }
+          }
+          Get-Process InfollopAssistServidor -IncludeUserName -ErrorAction SilentlyContinue | Format-Table Id, SessionId, UserName -AutoSize
+          Get-Content C:\ProgramData\InfollopAssist\servidor.log -ErrorAction SilentlyContinue
+          $p = Start-Process 'C:\Program Files\InfollopAssist\InfollopAssistServidor.exe' -ArgumentList '--quitar-servicio' -Wait -PassThru
+          "Quitar: código $($p.ExitCode)"
+          if (Get-Service InfollopAssist -ErrorAction SilentlyContinue) { 'El servicio sigue instalado'; exit 1 }
+          if (-not $ok) { 'El agente no llegó a escuchar en el puerto 6900'; exit 1 }
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: Enlace-Windows-x64
+          name: InfollopAssist-Windows-x64
           path: dist/
           retention-days: 30

@@ -29,7 +29,7 @@ public sealed class ExtChannel : IDisposable
     private const int ChunkSize = 64 * 1024;
     private const int MaxPayload = 1024 * 1024 + 64;
 
-    private enum Sub : byte { Hello = 1, Text = 2, BatchStart = 3, Dir = 4, FileBegin = 5, FileData = 6, FileEnd = 7, BatchEnd = 8, BatchAbort = 9 }
+    private enum Sub : byte { Hello = 1, Text = 2, BatchStart = 3, Dir = 4, FileBegin = 5, FileData = 6, FileEnd = 7, BatchEnd = 8, BatchAbort = 9, Chat = 10 }
 
     private readonly Action<byte[]> _send;
     private readonly SemaphoreSlim _sendGate = new(1, 1);
@@ -51,6 +51,8 @@ public sealed class ExtChannel : IDisposable
 
     public event Action? Activated;
     public event Action<string>? TextReceived;
+    /// <summary>Mensaje de chat recibido: (nombre de quien escribe, texto).</summary>
+    public event Action<string, string>? ChatReceived;
     public event Action<ReceivedBatch>? BatchReceived;
     public event Action<TransferProgress>? Progress;
     public event Action<string>? TransferFailed;
@@ -73,6 +75,14 @@ public sealed class ExtChannel : IDisposable
         var w = new PacketWriter(payload.Length + 8);
         w.U8(MessageType).U8((byte)sub).U16(0).U32((uint)payload.Length).Bytes(payload.Span);
         _send(w.ToArray());
+    }
+
+    /// <summary>Envía un mensaje de chat al otro equipo.</summary>
+    public void SendChat(string from, string text)
+    {
+        if (!Active) throw new InvalidOperationException("El otro equipo no admite chat");
+        if (text.Length > 20000) text = text[..20000];
+        Send(Sub.Chat, Str(Str(new PacketWriter(), from), text));
     }
 
     public void SendText(string text)
@@ -247,6 +257,13 @@ public sealed class ExtChannel : IDisposable
             case Sub.Hello:
                 Activate();
                 break;
+
+            case Sub.Chat:
+            {
+                var from = ReadStr(p, ref o);
+                ChatReceived?.Invoke(from, ReadStr(p, ref o));
+                break;
+            }
 
             case Sub.Text:
                 TextReceived?.Invoke(Encoding.UTF8.GetString(p));

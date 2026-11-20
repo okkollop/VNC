@@ -1,55 +1,68 @@
-# Enlace — escritorio remoto para Windows
+# InfollopAssist — escritorio remoto para Windows
 
-Dos programas:
+Dos programas, sin instalación ni .NET:
 
-- **EnlaceServidor.exe**: en el equipo que quieres controlar. Se queda junto al reloj.
-- **EnlaceVisor.exe**: en el equipo desde el que te conectas.
+- **InfollopAssistServidor.exe**: en el equipo que quieres controlar. Vive junto al reloj;
+  al pasar el ratón por su icono se ve la IP y el puerto.
+- **InfollopAssistVisor.exe**: en el equipo desde el que te conectas. Libreta de equipos por carpetas.
 
-No necesitan instalación ni tener .NET instalado.
+Puerto por defecto: **6900**.
 
-## Uso
+## Servidor
 
-1. En el equipo remoto abre `EnlaceServidor.exe`. La primera vez pide una contraseña
-   (sólo cuentan 8 caracteres, como en VNC). Windows preguntará por el firewall: permite
-   el acceso en redes privadas.
-2. Haz clic derecho en el icono de la bandeja (junto al reloj) para ver la IP del equipo.
-3. En el otro equipo abre `EnlaceVisor.exe`. Escribe la IP arriba y pulsa **Conectar**, o guárdalo
-   con **Nuevo equipo** (nombre, dirección y carpeta). Doble clic en un equipo para conectar: la primera
-   vez pide la contraseña y pregunta si quieres guardarla.
+1. Abre `InfollopAssistServidor.exe`. La primera vez pide la contraseña (sólo cuentan 8 caracteres,
+   como en VNC).
+2. Clic en el icono del reloj: ventana de estado con la IP, la contraseña y quién está conectado.
+   Menú (☰ o clic derecho): opciones, chat, carpeta de recibidos, desconectar, actualizaciones.
+3. **Opciones → General → Ejecutar como servicio** (recomendado): lo instala en
+   `C:\Program Files\InfollopAssist` como servicio de Windows. Así se ve también la pantalla de inicio
+   de sesión, la de bloqueo y las ventanas de administrador, Ctrl+Alt+Supr funciona y arranca aunque
+   nadie inicie sesión. Se quita desde el mismo interruptor. Pide permiso de administrador.
 
-## Traer los equipos de RealVNC
+La configuración del servidor está en `C:\ProgramData\InfollopAssist` (contraseña cifrada para el equipo).
 
-En RealVNC Viewer exporta las conexiones (crea un archivo `.vnc` por equipo). En Enlace Visor:
-**Importar de RealVNC → Carpeta con archivos .vnc…** y elige la carpeta. Se usa el nombre, la
-dirección, la etiqueta como carpeta y la fecha de última conexión. Las contraseñas no vienen en
-esos archivos: se piden al conectar. Si importas otra vez, se actualizan en lugar de duplicarse.
+## Visor
 
-Importante: un equipo con RealVNC Server sólo acepta, por defecto, el cifrado propio de RealVNC,
-que Enlace no puede usar. Para conectar a él hay que instalar Enlace Servidor en ese equipo o, en
-RealVNC Server, poner el cifrado en «preferir desactivado» y la autenticación en «contraseña VNC».
+- Escribe la IP arriba y pulsa **Conectar**, o guárdalo con **Archivo → Nueva conexión**.
+- Doble clic en un equipo para conectar: la primera vez pide la contraseña y pregunta si guardarla.
+- **Archivo → Importar de RealVNC**: lee los `.vnc` exportados de RealVNC Viewer (la etiqueta pasa a ser la carpeta).
+- Dentro de una conexión, la barra de iconos de arriba aparece al acercar el ratón: pantalla completa,
+  ajustar, Ctrl+Alt+Supr, tecla Windows, chat, enviar archivos, carpeta de recibidos, copiar y pegar
+  archivos y desconectar.
 
-Si en el equipo remoto también está RealVNC Server, los dos querrán el puerto 5900:
-cierra uno o cambia el puerto en *Configuración* (en el visor escribe `IP:puerto`).
+## Actualizaciones
 
-## Qué hace
+Los programas consultan `https://soporte.infollop.net/infollopassist/version.json`.
+El servidor se actualiza solo (cada 6 horas, cuando nadie está conectado). El visor pregunta al abrirse.
+Cada versión va firmada: si la firma o la huella del archivo no coinciden, no se instala.
 
-- Ver y controlar la pantalla (todas las pantallas del equipo remoto).
-- Portapapeles de texto en los dos sentidos.
-- Copiar archivos o carpetas en un equipo y pegarlos en el otro con Ctrl+V
-  (botón *Archivos por portapapeles*; límite configurable, 2 GB por defecto).
-- *Enviar archivos…* o arrastrar archivos a la ventana: llegan a `Descargas\Enlace` del equipo remoto.
-- Tecla Windows, Alt+Tab y Ctrl+Esc se envían al equipo remoto mientras la ventana tiene el foco.
+### Publicar una versión nueva
 
-Es compatible con visores VNC estándar (RealVNC Viewer, TigerVNC…) para ver, controlar y
-copiar texto, si el visor usa autenticación VNC normal sin cifrado propio.
+1. En GitHub: **Actions → Publicar versión → Run workflow**. Escribe el número (p. ej. `1.0.1`,
+   siempre mayor que el anterior) y qué cambia.
+2. GitHub compila, firma y:
+   - si están configurados los secretos SFTP, sube los archivos a la web solo;
+   - si no, deja un artefacto `InfollopAssist-<versión>-actualizacion` con tres archivos
+     (`InfollopAssistServidor.exe`, `InfollopAssistVisor.exe`, `version.json`) que hay que subir a
+     la carpeta `infollopassist` de soporte.infollop.net (primero los dos `.exe`, al final `version.json`).
+
+Secretos de GitHub (Settings → Secrets and variables → Actions → New repository secret):
+
+| Nombre | Qué es |
+|---|---|
+| `INFOLLOP_CLAVE` | Clave privada de firma (obligatoria). Guárdala también fuera de GitHub: sin ella no se pueden publicar actualizaciones. |
+| `SFTP_HOST` | Servidor SFTP (opcional), p. ej. `soporte.infollop.net` |
+| `SFTP_USUARIO` / `SFTP_CONTRASENA` | Usuario y contraseña SFTP de Plesk (opcional) |
+| `SFTP_RUTA` | Carpeta destino, p. ej. `soporte.infollop.net/infollopassist` (opcional) |
 
 ## Limitaciones
 
-- El servidor es una aplicación normal del usuario: no se ve la pantalla de inicio de sesión,
-  la de bloqueo ni las ventanas de UAC, y Ctrl+Alt+Supr no tiene efecto.
-- La conexión no va cifrada (la contraseña sí viaja protegida). Úsalo en tu red local o a través
-  de una VPN; no abras el puerto 5900 a Internet.
-- Las dos máquinas deberían usar la misma distribución de teclado (por ejemplo, español).
+- La conexión no va cifrada (la contraseña sí viaja protegida). Úsalo en tu red o por VPN; no abras
+  el puerto a Internet.
+- Para conectar a equipos con RealVNC Server hay que configurar en ellos «cifrado: preferir desactivado»
+  y «autenticación: contraseña VNC», o instalar InfollopAssist Servidor.
+- Chat, archivos y portapapeles de archivos sólo funcionan entre programas InfollopAssist.
+- Ambos equipos deberían usar la misma distribución de teclado.
 
 ## Compilar
 
@@ -60,3 +73,5 @@ dotnet test tests/Enlace.Protocol.Tests
 dotnet publish src/Enlace.Server -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o dist
 dotnet publish src/Enlace.Client -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o dist
 ```
+
+© 2026 Infollop. Todos los derechos reservados.

@@ -21,7 +21,10 @@ internal static class ServiceMode
     private const string MachineRunName = "InfollopAssistBandeja";
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
-    public static string InstallDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist");
+    public static string InstallDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist", "Server");
+
+    /// <summary>Ubicación de la versión 1.0.0 (sin subcarpeta), para limpiarla al reinstalar.</summary>
+    private static string OldInstalledExe => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist", "InfollopAssistServidor.exe");
     public static string InstalledExe => Path.Combine(InstallDir, "InfollopAssistServidor.exe");
 
     public static bool IsInstalled()
@@ -69,6 +72,12 @@ internal static class ServiceMode
                 if (IsInstalled()) StopService();
                 KillOthers(InstalledExe);
                 File.Copy(me, InstalledExe, true);
+            }
+            // Quitar sólo nuestro .exe de la ubicación antigua (en esa carpeta escriben otras aplicaciones)
+            if (File.Exists(OldInstalledExe) && !string.Equals(Path.GetFullPath(me), OldInstalledExe, StringComparison.OrdinalIgnoreCase))
+            {
+                KillOthers(OldInstalledExe);
+                try { File.Delete(OldInstalledExe); } catch { }
             }
 
             // 2. Servicio con reinicio automático si se cae (también tras actualizarse)

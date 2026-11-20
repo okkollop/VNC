@@ -54,7 +54,7 @@ jobs:
           }
           Get-Process InfollopAssistServidor -IncludeUserName -ErrorAction SilentlyContinue | Format-Table Id, SessionId, UserName -AutoSize
           Get-Content C:\ProgramData\InfollopAssist\servidor.log -ErrorAction SilentlyContinue
-          $p = Start-Process 'C:\Program Files\InfollopAssist\InfollopAssistServidor.exe' -ArgumentList '--quitar-servicio' -Wait -PassThru
+          $p = Start-Process 'C:\Program Files\InfollopAssist\Server\InfollopAssistServidor.exe' -ArgumentList '--quitar-servicio' -Wait -PassThru
           "Quitar: código $($p.ExitCode)"
           if (Get-Service InfollopAssist -ErrorAction SilentlyContinue) { 'El servicio sigue instalado'; exit 1 }
           if (-not $ok) { 'El agente no llegó a escuchar en el puerto 6900'; exit 1 }

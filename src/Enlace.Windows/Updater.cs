@@ -29,7 +29,10 @@ public static class Updater
     /// <summary>Devuelve la versión publicada si es más nueva que la actual y su firma es válida; si no, null.</summary>
     public static async Task<UpdateManifest?> CheckAsync(CancellationToken ct = default)
     {
-        var json = await Http.GetStringAsync(Url("version.json"), ct).ConfigureAwait(false);
+        string json;
+        try { json = await Http.GetStringAsync(Url("version.json"), ct).ConfigureAwait(false); }
+        // Sin version.json en el servidor = aún no hay ninguna versión publicada: no es un error.
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { return null; }
         var m = UpdateManifest.Parse(json);
         if (!m.VerifySignature()) throw new InvalidDataException("La firma de la actualización no es válida: se ignora.");
         return m.IsNewerThan(Brand.Version) ? m : null;

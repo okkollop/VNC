@@ -143,8 +143,13 @@ public static class Updater
         if (MessageBox.Show(owner, msg, Brand.Product, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
         try
         {
-            var file = await DownloadAsync(m, kind);
-            Install(file);
+            // En modo servicio el servicio puede haberse actualizado ya: el .exe en disco es
+            // el nuevo y este proceso sigue corriendo desde el .old. Basta con reiniciar.
+            if (DiskVersion() is not { } onDisk || m.IsNewerThan(onDisk))
+            {
+                var file = await DownloadAsync(m, kind);
+                Install(file);
+            }
             beforeRestart?.Invoke();
             Restart();
         }

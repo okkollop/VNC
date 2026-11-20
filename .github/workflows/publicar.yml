@@ -2,7 +2,7 @@ name: Publicar versión
 
 # Se lanza a mano: Actions → "Publicar versión" → Run workflow.
 # Necesita el secreto INFOLLOP_CLAVE (clave privada de firma).
-# Si existen SFTP_HOST, SFTP_USUARIO, SFTP_CONTRASENA y SFTP_RUTA, sube la versión a la web.
+# Publica una release; soporte.infollop.net la descarga sola (ver job "release").
 on:
   workflow_dispatch:
     inputs:
@@ -55,33 +55,27 @@ jobs:
           path: publicar/
           retention-days: 90
 
-  subir:
+  # Publica la versión como release pública. El servidor de soporte.infollop.net la
+  # recoge solo (cron cada 10 min, /usr/local/bin/infollopassist-sync.sh): así no
+  # hace falta guardar ninguna contraseña del servidor en GitHub.
+  release:
     needs: compilar
     runs-on: ubuntu-latest
-    env:
-      SFTP_HOST: ${{ secrets.SFTP_HOST }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: InfollopAssist-${{ inputs.version }}-actualizacion
           path: publicar
 
-      - name: Subir a la web por SFTP
-        if: env.SFTP_HOST != ''
+      - name: Crear release
         env:
-          SFTP_USUARIO: ${{ secrets.SFTP_USUARIO }}
-          SFTP_CONTRASENA: ${{ secrets.SFTP_CONTRASENA }}
-          SFTP_RUTA: ${{ secrets.SFTP_RUTA }}
+          GH_TOKEN: ${{ github.token }}
+          NOTAS: ${{ inputs.notas }}
         run: |
-          sudo apt-get install -y lftp >/dev/null
-          # Primero los .exe y al final version.json, para que nadie vea la versión nueva antes de que estén los archivos
-          lftp -u "$SFTP_USUARIO,$SFTP_CONTRASENA" "sftp://$SFTP_HOST" -e "
-            set sftp:auto-confirm yes; set net:max-retries 3;
-            mkdir -p -f $SFTP_RUTA; cd $SFTP_RUTA;
-            put publicar/InfollopAssistServidor.exe; put publicar/InfollopAssistVisor.exe;
-            put publicar/version.json; bye"
-          echo "Publicada la versión ${{ inputs.version }}"
-
-      - name: Aviso si no hay SFTP configurado
-        if: env.SFTP_HOST == ''
-        run: echo "No hay datos SFTP; descarga el artefacto y sube los 3 archivos a mano a soporte.infollop.net/infollopassist/"
+          v="${{ inputs.version }}"; v="v${v#v}"
+          gh release create "$v" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "InfollopAssist $v" --notes "${NOTAS:-Versión $v}" --latest \
+            publicar/InfollopAssistServidor.exe publicar/InfollopAssistVisor.exe publicar/version.json
+          echo "Publicada $v. soporte.infollop.net la recoge en 10 minutos como mucho."

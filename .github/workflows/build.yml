@@ -35,10 +35,15 @@ jobs:
         shell: pwsh
         run: |
           $exe = (Resolve-Path dist/InfollopAssistServidor.exe).Path
+          # Simular la otra aplicación InfollopAssist (RustDesk): su servicio y su carpeta
+          New-Item -ItemType Directory -Force 'C:\Program Files\InfollopAssist' | Out-Null
+          Set-Content 'C:\Program Files\InfollopAssist\otra-app.txt' 'no tocar'
+          sc.exe create InfollopAssist binPath= '"C:\Program Files\InfollopAssist\InfollopAssist.exe" --service' start= demand | Out-Null
+          $otraAntes = (Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\InfollopAssist).ImagePath
           $p = Start-Process $exe -ArgumentList '--instalar-servicio' -Wait -PassThru
           "Instalar: código $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { Get-Content C:\ProgramData\InfollopAssist\servidor.log -ErrorAction SilentlyContinue; exit 1 }
-          (Get-Service InfollopAssist).Status
+          (Get-Service InfollopAssistServidor).Status
           $ok = $false
           for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
             Start-Sleep 1
@@ -54,9 +59,15 @@ jobs:
           }
           Get-Process InfollopAssistServidor -IncludeUserName -ErrorAction SilentlyContinue | Format-Table Id, SessionId, UserName -AutoSize
           Get-Content C:\ProgramData\InfollopAssist\servidor.log -ErrorAction SilentlyContinue
-          $p = Start-Process 'C:\Program Files\InfollopAssist\Server\InfollopAssistServidor.exe' -ArgumentList '--quitar-servicio' -Wait -PassThru
+          $p = Start-Process 'C:\Program Files\InfollopAssist Servidor\InfollopAssistServidor.exe' -ArgumentList '--quitar-servicio' -Wait -PassThru
           "Quitar: código $($p.ExitCode)"
-          if (Get-Service InfollopAssist -ErrorAction SilentlyContinue) { 'El servicio sigue instalado'; exit 1 }
+          if (Get-Service InfollopAssistServidor -ErrorAction SilentlyContinue) { 'El servicio sigue instalado'; exit 1 }
+          # La otra aplicación tiene que seguir intacta
+          $otraDespues = (Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\InfollopAssist -ErrorAction SilentlyContinue).ImagePath
+          "Servicio de la otra app: $otraDespues"
+          if ($otraDespues -ne $otraAntes) { 'Se ha tocado el servicio de la otra aplicación'; exit 1 }
+          if (-not (Test-Path 'C:\Program Files\InfollopAssist\otra-app.txt')) { 'Se ha borrado la carpeta de la otra aplicación'; exit 1 }
+          sc.exe delete InfollopAssist | Out-Null
           if (-not $ok) { 'El agente no llegó a escuchar en el puerto 6900'; exit 1 }
 
       - uses: actions/upload-artifact@v4

@@ -15,16 +15,26 @@ namespace Enlace.Server;
 /// </summary>
 internal static class ServiceMode
 {
-    public const string ServiceName = "InfollopAssist";
+    // Nombres propios: en los mismos equipos hay otra aplicación InfollopAssist (RustDesk) que usa
+    // el servicio "InfollopAssist" y la carpeta "Program Files\InfollopAssist" (y la borra al desinstalarse).
+    public const string ServiceName = "InfollopAssistServidor";
+    private const string LegacyServiceName = "InfollopAssist"; // usado por la versión 1.0.0
     public const string DisplayName = "InfollopAssist Servidor";
     public const string SasEventName = @"Global\InfollopAssist.SAS";
-    private const string MachineRunName = "InfollopAssistBandeja";
+    private const string MachineRunName = "InfollopAssistServidorBandeja";
+    private const string LegacyMachineRunName = "InfollopAssistBandeja";
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
-    public static string InstallDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist", "Server");
+    public static string InstallDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist Servidor");
 
-    /// <summary>Ubicación de la versión 1.0.0 (sin subcarpeta), para limpiarla al reinstalar.</summary>
-    private static string OldInstalledExe => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "InfollopAssist", "InfollopAssistServidor.exe");
+    private static string ProgramFiles => Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
+    /// <summary>Ubicaciones usadas antes (dentro de la carpeta de la otra aplicación): se limpia sólo nuestro .exe.</summary>
+    private static readonly string[] OldInstalledExes =
+    {
+        Path.Combine(ProgramFiles, "InfollopAssist", "InfollopAssistServidor.exe"),
+        Path.Combine(ProgramFiles, "InfollopAssist", "Server", "InfollopAssistServidor.exe"),
+    };
     public static string InstalledExe => Path.Combine(InstallDir, "InfollopAssistServidor.exe");
 
     public static bool IsInstalled()
@@ -73,12 +83,7 @@ internal static class ServiceMode
                 KillOthers(InstalledExe);
                 File.Copy(me, InstalledExe, true);
             }
-            // Quitar sólo nuestro .exe de la ubicación antigua (en esa carpeta escriben otras aplicaciones)
-            if (File.Exists(OldInstalledExe) && !string.Equals(Path.GetFullPath(me), OldInstalledExe, StringComparison.OrdinalIgnoreCase))
-            {
-                KillOthers(OldInstalledExe);
-                try { File.Delete(OldInstalledExe); } catch { }
-            }
+            MigrateLegacy(me);
 
             // 2. Servicio con reinicio automático si se cae (también tras actualizarse)
             if (!IsInstalled())
@@ -112,6 +117,43 @@ internal static class ServiceMode
         {
             Log("Instalación del servicio: " + ex);
             return 1;
+        }
+    }
+
+    /// <summary>Ruta del programa de un servicio (ImagePath en el registro), o null si no existe.</summary>
+    private static string? ServiceImagePath(string name)
+    {
+        using var k = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{name}");
+        return k?.GetValue("ImagePath", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+    }
+
+    /// <summary>
+    /// Limpia lo que dejó la versión 1.0.0: el servicio "InfollopAssist" (sólo si es el nuestro:
+    /// si apunta a otro programa, es el de la otra aplicación y no se toca), su arranque y nuestro .exe.
+    /// </summary>
+    private static void MigrateLegacy(string me)
+    {
+        var img = ServiceImagePath(LegacyServiceName);
+        if (img != null && img.Contains("InfollopAssistServidor.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            Run("sc.exe", $"stop {LegacyServiceName}");
+            Thread.Sleep(2000);
+            Run("sc.exe", $"delete {LegacyServiceName}");
+            Log("Eliminado el servicio antiguo InfollopAssist de la versión 1.0.0");
+        }
+        using (var k = Registry.LocalMachine.CreateSubKey(RunKey))
+            if (k.GetValue(LegacyMachineRunName) is string v && v.Contains("InfollopAssistServidor.exe", StringComparison.OrdinalIgnoreCase))
+                k.DeleteValue(LegacyMachineRunName, false);
+        foreach (var old in OldInstalledExes)
+        {
+            if (!File.Exists(old) || string.Equals(Path.GetFullPath(me), old, StringComparison.OrdinalIgnoreCase)) continue;
+            KillOthers(old);
+            try { File.Delete(old); } catch { }
+            try { File.Delete(old + ".old"); } catch { }
+            // La subcarpeta Server era sólo nuestra: quitarla si queda vacía (nunca la carpeta InfollopAssist)
+            var dir = Path.GetDirectoryName(old)!;
+            if (Path.GetFileName(dir) == "Server")
+                try { if (!Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir); } catch { }
         }
     }
 

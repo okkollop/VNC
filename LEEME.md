@@ -15,7 +15,7 @@ Puerto por defecto: **6900**.
 2. Clic en el icono del reloj: ventana de estado con la IP, la contraseña y quién está conectado.
    Menú (☰ o clic derecho): opciones, chat, carpeta de recibidos, desconectar, actualizaciones.
 3. **Opciones → General → Ejecutar como servicio** (recomendado): lo instala en
-   `C:\Program Files\InfollopAssist\Server` como servicio de Windows. Así se ve también la pantalla de inicio
+   `C:\Program Files\InfollopAssist Servidor` como servicio de Windows (servicio `InfollopAssistServidor`). Así se ve también la pantalla de inicio
    de sesión, la de bloqueo y las ventanas de administrador, Ctrl+Alt+Supr funciona y arranca aunque
    nadie inicie sesión. Se quita desde el mismo interruptor. Pide permiso de administrador.
 

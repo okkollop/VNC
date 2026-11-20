@@ -45,6 +45,7 @@ internal sealed class ViewerForm : Form
             new BarItem { Icon = BarIcon.CtrlAltDel, Tip = "Enviar Ctrl+Alt+Supr (puede no tener efecto: Windows lo reserva al sistema)",
                           Click = () => SendCombo(KeyMap.XK_Control_L, KeyMap.XK_Alt_L, 0xFFFF) },
             new BarItem { Icon = BarIcon.WinKey, Tip = "Enviar tecla Windows", Click = () => SendCombo(KeyMap.XK_Super_L), SeparatorAfter = true },
+            new BarItem { Icon = BarIcon.Chat, Tip = "Chat con el usuario remoto", Click = OpenChat },
             new BarItem { Icon = BarIcon.SendFiles, Tip = "Enviar archivos al equipo remoto (Descargas\\InfollopAssist)", Click = PickAndSend },
             new BarItem { Icon = BarIcon.Folder, Tip = "Abrir carpeta de recibidos", Click = () => OpenFolder(AppPaths.ReceivedFolder) },
             new BarItem { Icon = BarIcon.ClipboardFiles, Tip = "Copiar y pegar archivos entre equipos (activado/desactivado)", IsChecked = () => _cfg.SyncClipboardFiles,
@@ -97,6 +98,7 @@ internal sealed class ViewerForm : Form
         _c.Ext.Activated += () => UI(UpdateDefaultStatus);
 
         _c.Bell += () => UI(() => SystemSounds.Beep.Play());
+        _c.Ext.ChatReceived += (from, text) => UI(() => { var chat = Chat(); chat.Add(from, text); chat.Present(); });
         _c.Disconnected += ex => UI(() =>
         {
             _disconnectError = ex?.Message;
@@ -189,6 +191,24 @@ internal sealed class ViewerForm : Form
         _surface.Focus();
     }
 
+    private ChatForm? _chat;
+
+    private ChatForm Chat()
+    {
+        if (_chat == null || _chat.IsDisposed)
+        {
+            _chat = new ChatForm($"Chat con {_hostLabel} — {Brand.Product}", text => _c.Ext.SendChat(Environment.UserName, text));
+            _chat.FormClosing += (_, e) => { if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; _chat.Hide(); } };
+        }
+        return _chat;
+    }
+
+    private void OpenChat()
+    {
+        if (!CheckExt()) return;
+        Chat().Present();
+    }
+
     private void SendCombo(params uint[] keys)
     {
         foreach (var k in keys) _c.SendKey(k, true);
@@ -268,6 +288,7 @@ internal sealed class ViewerForm : Form
     {
         _closing = true;
         _track.Stop();
+        _chat?.Dispose();
         _hook.Dispose();
         _c.TextReceived -= _clip.SetRemoteText;
         _c.Ext.TextReceived -= _clip.SetRemoteText;

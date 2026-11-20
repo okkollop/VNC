@@ -11,56 +11,97 @@ internal sealed class BookForm : Form
     private readonly ClientConfig _cfg = ClientConfig.Load();
     private AddressBook Book => _cfg.Book;
 
-    private readonly TextBox _search = new() { Dock = DockStyle.Fill, PlaceholderText = "Escribe una dirección para conectar o busca por nombre" };
-    private readonly Button _go = new() { Text = "Conectar", AutoSize = true, Dock = DockStyle.Right };
-    private readonly TreeView _tree = new() { Dock = DockStyle.Fill, HideSelection = false, AllowDrop = true, ShowLines = false, FullRowSelect = true, ItemHeight = 24 };
-    private readonly ListView _list = new() { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, AllowColumnReorder = true };
-    private readonly ToolStripStatusLabel _status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+    private readonly TextBox _search = new()
+    {
+        Dock = DockStyle.Fill, PlaceholderText = "Escribe la dirección de un equipo o búscalo por nombre", BorderStyle = BorderStyle.FixedSingle, Font = Ui.Body,
+    };
+    private readonly Button _go = new() { Text = "Conectar", AutoSize = true, Dock = DockStyle.Right, FlatStyle = FlatStyle.System };
+    private readonly TreeView _tree = new()
+    {
+        Dock = DockStyle.Fill, HideSelection = false, AllowDrop = true, ShowLines = false, ShowRootLines = false, FullRowSelect = true,
+        ItemHeight = 34, BorderStyle = BorderStyle.None, BackColor = Ui.Sidebar, Font = Ui.Body, Indent = 4,
+    };
+    private readonly ListView _list = new()
+    {
+        Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, AllowColumnReorder = true,
+        BorderStyle = BorderStyle.None, Font = Ui.Body,
+    };
+    private readonly Label _status = new() { AutoSize = false, Dock = DockStyle.Bottom, Height = 22, ForeColor = Ui.Muted, Font = Ui.Small, Padding = new Padding(10, 0, 0, 0), TextAlign = ContentAlignment.MiddleLeft, BackColor = Color.White };
     private readonly HashSet<string> _connecting = new();
     private int _sortColumn;
     private bool _sortDesc;
 
     public BookForm()
     {
-        Text = "InfollopAssist Visor";
+        Text = Brand.ViewerName;
         Icon = AppIcon.Get();
+        Font = Ui.Body;
         StartPosition = FormStartPosition.CenterScreen;
-        Size = new Size(940, 640);
-        MinimumSize = new Size(600, 400);
+        Size = new Size(1000, 660);
+        MinimumSize = new Size(640, 420);
+        BackColor = Color.White;
 
-        // Barra superior: dirección/búsqueda
-        var top = new Panel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(8, 5, 8, 3) };
-        top.Controls.Add(_search);
-        top.Controls.Add(_go);
-
-        var bar = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden };
-        bar.Items.Add("Nuevo equipo", null, (_, _) => NewEntry());
-        bar.Items.Add("Nueva carpeta", null, (_, _) => NewFolder());
-        bar.Items.Add(new ToolStripSeparator());
-        bar.Items.Add("Editar", null, (_, _) => EditSelected());
-        bar.Items.Add("Eliminar", null, (_, _) => DeleteSelected());
-        bar.Items.Add(new ToolStripSeparator());
-        var import = new ToolStripDropDownButton("Importar de RealVNC");
+        // ---- Menú ----
+        var menu = new MenuStrip { BackColor = Color.White, Font = Ui.Body, Padding = new Padding(4, 2, 0, 2) };
+        var file = new ToolStripMenuItem("&Archivo");
+        file.DropDownItems.Add("Nueva conexión…", null, (_, _) => NewEntry());
+        file.DropDownItems.Add("Nueva carpeta…", null, (_, _) => NewFolder());
+        file.DropDownItems.Add(new ToolStripSeparator());
+        file.DropDownItems.Add("Editar…", null, (_, _) => EditSelected());
+        file.DropDownItems.Add("Eliminar", null, (_, _) => DeleteSelected());
+        file.DropDownItems.Add(new ToolStripSeparator());
+        var import = new ToolStripMenuItem("Importar de RealVNC");
         import.DropDownItems.Add("Archivos .vnc…", null, (_, _) => ImportFiles());
         import.DropDownItems.Add("Carpeta con archivos .vnc…", null, (_, _) => ImportFolder());
-        bar.Items.Add(import);
+        file.DropDownItems.Add(import);
+        file.DropDownItems.Add(new ToolStripSeparator());
+        file.DropDownItems.Add("Salir", null, (_, _) => Close());
+        var view = new ToolStripMenuItem("&Visualizar");
+        view.DropDownItems.Add("Opciones…", null, (_, _) => ShowOptions());
+        var help = new ToolStripMenuItem("A&yuda");
+        help.DropDownItems.Add("Buscar actualizaciones…", null, async (_, _) => await Updater.CheckInteractiveAsync(this, AppKind.Visor));
+        help.DropDownItems.Add($"Acerca de {Brand.ViewerName}", null, (_, _) => ShowOptions(about: true));
+        menu.Items.AddRange(new ToolStripItem[] { file, view, help });
+        MainMenuStrip = menu;
 
-        _list.Columns.Add("Nombre", 220);
-        _list.Columns.Add("Dirección", 200);
-        _list.Columns.Add("Última conexión", 150);
-        _list.Columns.Add("Carpeta", 150);
+        // ---- Cabecera: logo + dirección/búsqueda ----
+        var top = new Panel { Dock = DockStyle.Top, Height = 52, Padding = new Padding(10, 10, 12, 10), BackColor = Color.White };
+        var logoBox = new Panel { Dock = DockStyle.Left, Width = 150 };
+        logoBox.Controls.Add(new PictureBox { Image = Brand.Logo(), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(32, 32), Location = new Point(0, 0) });
+        logoBox.Controls.Add(new Label { Text = Brand.Product, Font = Ui.BodyBold, ForeColor = Ui.Accent, AutoSize = true, Location = new Point(36, 7) });
+        var searchHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 4, 8, 0) };
+        searchHost.Controls.Add(_search);
+        top.Controls.Add(searchHost);
+        top.Controls.Add(_go);
+        top.Controls.Add(logoBox);
 
-        var split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterDistance = 230 };
-        split.Panel1.Controls.Add(_tree);
+        // ---- Iconos ----
+        var treeIcons = new ImageList { ImageSize = new Size(20, 20), ColorDepth = ColorDepth.Depth32Bit };
+        treeIcons.Images.Add("todos", Icons.Grid(20));
+        treeIcons.Images.Add("etiqueta", Icons.Tag(20));
+        _tree.ImageList = treeIcons;
+        var listIcons = new ImageList { ImageSize = new Size(40, 30), ColorDepth = ColorDepth.Depth32Bit };
+        listIcons.Images.Add("pc", Icons.Monitor(40, 30, Ui.AccentLight));
+        listIcons.Images.Add("pcgris", Icons.Monitor(40, 30, Color.FromArgb(210, 214, 220)));
+        _list.SmallImageList = listIcons;
+
+        _list.Columns.Add("Nombre", 280);
+        _list.Columns.Add("Dirección", 190);
+        _list.Columns.Add("Última conexión", 160);
+        _list.Columns.Add("Carpeta", 160);
+
+        var left = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Sidebar, Padding = new Padding(6, 8, 0, 0) };
+        left.Controls.Add(_tree);
+        var split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterDistance = 240, SplitterWidth = 1, BackColor = Ui.Line };
+        split.Panel1.Controls.Add(left);
         split.Panel2.Controls.Add(_list);
-
-        var statusBar = new StatusStrip();
-        statusBar.Items.Add(_status);
+        split.Panel2.BackColor = Color.White;
 
         Controls.Add(split);
-        Controls.Add(bar);
+        Controls.Add(new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Ui.Line });
         Controls.Add(top);
-        Controls.Add(statusBar);
+        Controls.Add(menu);
+        Controls.Add(_status);
 
         _go.Click += (_, _) => GoFromSearch();
         _search.TextChanged += (_, _) => FillList();
@@ -113,16 +154,16 @@ internal sealed class BookForm : Form
         select ??= (string?)_tree.SelectedNode?.Tag ?? AllKey;
         _tree.BeginUpdate();
         _tree.Nodes.Clear();
-        var all = _tree.Nodes.Add($"Todos los equipos ({Book.Entries.Count})");
+        var all = _tree.Nodes.Add(AllKey, $"Todos los equipos ({Book.Entries.Count})", "todos", "todos");
         all.Tag = AllKey;
         foreach (var f in Book.AllFolders())
         {
             int n = Book.Entries.Count(e => string.Equals(e.Folder, f, StringComparison.CurrentCultureIgnoreCase));
-            var node = _tree.Nodes.Add($"{f} ({n})");
+            var node = _tree.Nodes.Add(f, $"{f} ({n})", "etiqueta", "etiqueta");
             node.Tag = f;
         }
         int none = Book.Entries.Count(e => e.Folder.Length == 0);
-        if (none > 0) _tree.Nodes.Add($"Sin carpeta ({none})").Tag = NoneKey;
+        if (none > 0) _tree.Nodes.Add(NoneKey, $"Sin carpeta ({none})", "etiqueta", "etiqueta").Tag = NoneKey;
         _tree.EndUpdate();
         _tree.SelectedNode = _tree.Nodes.Cast<TreeNode>().FirstOrDefault(n => string.Equals((string)n.Tag!, select, StringComparison.CurrentCultureIgnoreCase)) ?? all;
         FillList();
@@ -165,7 +206,7 @@ internal sealed class BookForm : Form
                 e.Host,
                 e.LastConnected?.ToLocalTime().ToString("dd/MM/yyyy, HH:mm") ?? "",
                 e.Folder,
-            }) { Tag = e, Selected = selected.Contains(e.Id) };
+            }) { Tag = e, Selected = selected.Contains(e.Id), ImageKey = e.LastConnected != null ? "pc" : "pcgris" };
             if (_connecting.Contains(e.Id)) it.ForeColor = SystemColors.GrayText;
             _list.Items.Add(it);
         }
@@ -179,6 +220,28 @@ internal sealed class BookForm : Form
     {
         _cfg.Save();
         FillTree(selectFolder);
+    }
+
+    private ViewerOptionsForm? _options;
+
+    private void ShowOptions(bool about = false)
+    {
+        if (_options == null || _options.IsDisposed) _options = new ViewerOptionsForm(_cfg);
+        if (about) _options.ShowAbout();
+        _options.Show(this);
+        _options.Activate();
+    }
+
+    /// <summary>Al arrancar: si toca, buscar actualizaciones (una vez al día) y preguntar.</summary>
+    protected override async void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Updater.CleanupOld();
+        Updater.BaseUrl = _cfg.UpdateUrl;
+        if (!_cfg.AutoUpdate || (DateTime.Now - _cfg.LastUpdateCheck).TotalHours < 20) return;
+        _cfg.LastUpdateCheck = DateTime.Now;
+        _cfg.Save();
+        await Updater.CheckInteractiveAsync(this, AppKind.Visor, quietIfNone: true);
     }
 
     // ---------------- Menús ----------------

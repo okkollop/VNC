@@ -2,7 +2,7 @@ using System.Drawing.Drawing2D;
 
 namespace Enlace.Client;
 
-internal enum BarIcon { Fullscreen, ExitFullscreen, Fit, CtrlAltDel, WinKey, SendFiles, Folder, ClipboardFiles, Close }
+internal enum BarIcon { Fullscreen, ExitFullscreen, Fit, CtrlAltDel, WinKey, SendFiles, Folder, ClipboardFiles, Chat, Close }
 
 internal sealed class BarItem
 {
@@ -254,6 +254,22 @@ internal sealed class FloatingBar : Control
                 g.DrawLine(pen, x + 7, y + 13, x + w - 7, y + 13);
                 g.DrawLine(pen, x + 7, y + 17, x + w - 10, y + 17);
                 break;
+            case BarIcon.Chat:
+            {
+                using var path = new GraphicsPath();
+                path.AddArc(x + 1, y + 2, 8, 8, 180, 90);
+                path.AddArc(x + w - 9, y + 2, 8, 8, 270, 90);
+                path.AddArc(x + w - 9, y + h - 12, 8, 8, 0, 90);
+                path.AddLine(x + 9, y + h - 4, x + 5, y + h);
+                path.AddLine(x + 5, y + h, x + 5, y + h - 4);
+                path.AddArc(x + 1, y + h - 12, 8, 8, 90, 90);
+                path.CloseFigure();
+                g.DrawPath(pen, path);
+                g.FillEllipse(brush, x + 5, y + 8, 2.4f, 2.4f);
+                g.FillEllipse(brush, x + 9, y + 8, 2.4f, 2.4f);
+                g.FillEllipse(brush, x + 13, y + 8, 2.4f, 2.4f);
+                break;
+            }
             case BarIcon.Close:
                 g.DrawLine(pen, x + 4, y + 4, x + w - 4, y + h - 4);
                 g.DrawLine(pen, x + w - 4, y + 4, x + 4, y + h - 4);

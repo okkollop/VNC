@@ -19,6 +19,9 @@ internal sealed class ClientConfig
     public bool SyncClipboardFiles { get; set; } = true;
     public bool FitToWindow { get; set; } = true;
     public int MaxClipboardFilesMB { get; set; } = 2048;
+    public bool AutoUpdate { get; set; } = true;
+    public string UpdateUrl { get; set; } = Updater.DefaultBaseUrl;
+    public DateTime LastUpdateCheck { get; set; }
 
     public static ClientConfig Load()
     {

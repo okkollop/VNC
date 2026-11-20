@@ -1,0 +1,87 @@
+name: Publicar versión
+
+# Se lanza a mano: Actions → "Publicar versión" → Run workflow.
+# Necesita el secreto INFOLLOP_CLAVE (clave privada de firma).
+# Si existen SFTP_HOST, SFTP_USUARIO, SFTP_CONTRASENA y SFTP_RUTA, sube la versión a la web.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Número de versión (p. ej. 1.0.1). Tiene que ser mayor que la publicada."
+        required: true
+      notas:
+        description: "Qué cambia (lo verán al actualizar)"
+        required: false
+        default: ""
+
+jobs:
+  compilar:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Tests
+        run: dotnet test tests/Enlace.Protocol.Tests -c Release
+
+      - name: Compilar con la versión indicada
+        shell: pwsh
+        run: |
+          $v = '${{ inputs.version }}'.TrimStart('v')
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { "Versión no válida: $v (formato 1.2.3)"; exit 1 }
+          foreach ($p in 'Server','Client') {
+            dotnet publish src/Enlace.$p -c Release -r win-x64 --self-contained true `
+              -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+              -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none `
+              -p:Version=$v -o publicar
+          }
+
+      - name: Firmar (version.json)
+        shell: pwsh
+        env:
+          INFOLLOP_CLAVE: ${{ secrets.INFOLLOP_CLAVE }}
+          NOTAS: ${{ inputs.notas }}
+        run: |
+          if (-not $env:INFOLLOP_CLAVE) { 'Falta el secreto INFOLLOP_CLAVE en GitHub (Settings → Secrets → Actions).'; exit 1 }
+          dotnet run --project tools/Firmar -c Release -- publicar '${{ inputs.version }}' "$env:NOTAS"
+          Get-Content publicar/version.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: InfollopAssist-${{ inputs.version }}-actualizacion
+          path: publicar/
+          retention-days: 90
+
+  subir:
+    needs: compilar
+    runs-on: ubuntu-latest
+    env:
+      SFTP_HOST: ${{ secrets.SFTP_HOST }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: InfollopAssist-${{ inputs.version }}-actualizacion
+          path: publicar
+
+      - name: Subir a la web por SFTP
+        if: env.SFTP_HOST != ''
+        env:
+          SFTP_USUARIO: ${{ secrets.SFTP_USUARIO }}
+          SFTP_CONTRASENA: ${{ secrets.SFTP_CONTRASENA }}
+          SFTP_RUTA: ${{ secrets.SFTP_RUTA }}
+        run: |
+          sudo apt-get install -y lftp >/dev/null
+          # Primero los .exe y al final version.json, para que nadie vea la versión nueva antes de que estén los archivos
+          lftp -u "$SFTP_USUARIO,$SFTP_CONTRASENA" "sftp://$SFTP_HOST" -e "
+            set sftp:auto-confirm yes; set net:max-retries 3;
+            mkdir -p -f $SFTP_RUTA; cd $SFTP_RUTA;
+            put publicar/InfollopAssistServidor.exe; put publicar/InfollopAssistVisor.exe;
+            put publicar/version.json; bye"
+          echo "Publicada la versión ${{ inputs.version }}"
+
+      - name: Aviso si no hay SFTP configurado
+        if: env.SFTP_HOST == ''
+        run: echo "No hay datos SFTP; descarga el artefacto y sube los 3 archivos a mano a soporte.infollop.net/infollopassist/"
